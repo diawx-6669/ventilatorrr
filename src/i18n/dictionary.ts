@@ -62,6 +62,7 @@ const ru = {
     top: "Лидер голосования",
     all: "Все",
     voteError: "Голос не засчитан. Попробуй ещё раз.",
+    staticSub: "Самые популярные идеи. Голосование откроется вместе с приёмом заявок.",
   },
   categories: {
     topic: "Тема",
@@ -82,6 +83,7 @@ const ru = {
     submit: "Отправить",
     sending: "Отправляем…",
     draftSaved: "Черновик сохраняется на этом устройстве",
+    staticNotice: "Это витрина сайта. Приём заявок откроется совсем скоро, а пока пиши ведущим в Instagram.",
     errors: {
       generic: "Не получилось отправить. Проверь интернет и попробуй ещё раз.",
       rateLimited: "С этого устройства уже много заявок. Попробуй через час.",
@@ -220,6 +222,7 @@ const kk: Dictionary = {
     top: "Дауыс беру көшбасшысы",
     all: "Барлығы",
     voteError: "Дауыс есептелмеді. Қайталап көр.",
+    staticSub: "Ең танымал идеялар. Дауыс беру өтінім қабылдаумен бірге ашылады.",
   },
   categories: {
     topic: "Тақырып",
@@ -240,6 +243,7 @@ const kk: Dictionary = {
     submit: "Жіберу",
     sending: "Жіберілуде…",
     draftSaved: "Жоба осы құрылғыда сақталады",
+    staticNotice: "Бұл сайттың көрмесі. Өтінім қабылдау жақында ашылады, әзірге жүргізушілерге Instagram-да жаз.",
     errors: {
       generic: "Жіберу мүмкін болмады. Интернетті тексеріп, қайталап көр.",
       rateLimited: "Бұл құрылғыдан өтінім көп. Бір сағаттан кейін қайталап көр.",
@@ -376,6 +380,7 @@ const en: Dictionary = {
     top: "Leading the vote",
     all: "All",
     voteError: "Vote not counted. Try again.",
+    staticSub: "The most popular ideas. Voting opens together with entries.",
   },
   categories: {
     topic: "Topic",
@@ -396,6 +401,7 @@ const en: Dictionary = {
     submit: "Send",
     sending: "Sending…",
     draftSaved: "Your draft is saved on this device",
+    staticNotice: "This is a preview of the site. Entries open very soon; until then, message the hosts on Instagram.",
     errors: {
       generic: "Couldn't send. Check your connection and try again.",
       rateLimited: "Lots of entries from this device already. Try again in an hour.",

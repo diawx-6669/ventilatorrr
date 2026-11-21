@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:pages": "GITHUB_PAGES=1 next build && node scripts/pages-postbuild.mjs",
+    "qa": "node scripts/qa.mjs"
   },
   "dependencies": {
     "@fontsource-variable/onest": "^5.3.1",

@@ -25,7 +25,7 @@ function fieldErrors(error: z.ZodError) {
   return out;
 }
 
-export async function POST(req: NextRequest, ctx: RouteContext<"/api/submit/[kind]">) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ kind: string }> }) {
   const { kind } = await ctx.params;
   if (!(KINDS as readonly string[]).includes(kind)) return bad(404, "unknown_kind");
 

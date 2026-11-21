@@ -8,6 +8,7 @@ import type { Kind } from "@/lib/types";
 import { SpringButton } from "@/components/site/spring";
 import { Honeypot, type Accent } from "./fields";
 import { Success } from "./success";
+import { IS_STATIC } from "@/lib/deploy";
 
 /** Form state that survives switching apps to copy a nickname. Kept on this device only. */
 export function useDraft<T extends object>(key: string, initial: T) {
@@ -159,6 +160,12 @@ export function FormFrame({
         className="flex flex-col gap-4"
       >
         <Honeypot value={state.honeypot} onChange={state.setHoneypot} />
+        {IS_STATIC && (
+          <p className="flex items-start gap-2 rounded-2xl bg-orange/15 p-4 text-[16px] font-semibold text-paper ring-1 ring-orange/50">
+            <WarningCircle weight="bold" className="mt-0.5 size-5 shrink-0 text-orange" aria-hidden />
+            {t.forms.staticNotice}
+          </p>
+        )}
         {children}
 
         <div aria-live="assertive" role="alert">
@@ -177,7 +184,7 @@ export function FormFrame({
           </AnimatePresence>
         </div>
 
-        <SpringButton type="submit" tone={tone} size="lg" className="mt-1 w-full sm:w-auto sm:self-start" disabled={state.phase === "sending"}>
+        <SpringButton type="submit" tone={tone} size="lg" className="mt-1 w-full sm:w-auto sm:self-start" disabled={IS_STATIC || state.phase === "sending"}>
           {state.phase === "sending" ? t.forms.sending : t.forms.submit}
           <PaperPlaneTilt weight="bold" className={`size-5 ${state.phase === "sending" ? "motion-safe:animate-pulse" : ""}`} aria-hidden />
         </SpringButton>

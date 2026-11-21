@@ -7,6 +7,7 @@ import { site } from "@/config/site";
 import { LOCALE_COOKIE, localeLabels, localePath, locales, isLocale } from "@/i18n/config";
 import { useDict, useLocale } from "@/components/providers";
 import { FanMark } from "./fan-mark";
+import { withBase } from "@/lib/deploy";
 
 export function Header() {
   const t = useDict();
@@ -55,7 +56,7 @@ export function Header() {
             return (
               <a
                 key={l}
-                href={localePath(l, rest)}
+                href={withBase(localePath(l, rest))}
                 hrefLang={localeLabels[l].htmlLang}
                 lang={localeLabels[l].htmlLang}
                 aria-current={active ? "true" : undefined}

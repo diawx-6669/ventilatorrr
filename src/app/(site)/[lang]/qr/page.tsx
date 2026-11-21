@@ -26,7 +26,7 @@ export default async function QrPage({ params }: PageProps<"/[lang]/qr">) {
     const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
     base = `${proto}://${host}`;
   }
-  const target = new URL(localePath(locale), base).toString();
+  const target = `${base.replace(/\/$/, "")}${localePath(locale)}`;
   const svg = await QRCode.toString(target, { type: "svg", errorCorrectionLevel: "H", margin: 0, color: { dark: "#080b1cff", light: "#00000000" } });
   const name = locale === "en" ? site.nameLatin : site.name;
 

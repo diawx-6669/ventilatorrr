@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { fitVar } from "@/lib/fit";
 import { useStored, writeStored } from "@/lib/use-stored";
+import { IS_STATIC } from "@/lib/deploy";
 import { AnimatePresence, LayoutGroup, m } from "motion/react";
 import { ArrowFatUp, CheckFat } from "@phosphor-icons/react/dist/ssr";
 import { localePath } from "@/i18n/config";
@@ -71,7 +72,7 @@ export function Ideas({ ideas: initial }: { ideas: PublicIdea[] }) {
       <h2 id="ideas-title" className="display [--wdth:115%] text-[min(clamp(34px,7vw,88px),calc((min(100vw,1400px)-2*var(--gutter))/(var(--n)*1.2)))]" style={fitVar(t.ideas.title)}>
         {t.ideas.title}
       </h2>
-      <p className="mt-4 max-w-[52ch] text-lg text-paper/85">{t.ideas.sub}</p>
+      <p className="mt-4 max-w-[52ch] text-lg text-paper/85">{IS_STATIC ? t.ideas.staticSub : t.ideas.sub}</p>
 
       {ideas.length === 0 ? (
         <div className="mt-10 flex flex-col items-start gap-5 rounded-[28px] border-2 border-dashed border-paper/25 p-8">
@@ -132,7 +133,7 @@ export function Ideas({ ideas: initial }: { ideas: PublicIdea[] }) {
                           {t.categories[leader.category]} · {t.ideas.votes(leader.votes_count)}
                         </p>
                       </div>
-                      <VoteButton voted={voted.has(leader.id)} onVote={() => vote(leader.id)} big label={leader.text} />
+                      {!IS_STATIC && <VoteButton voted={voted.has(leader.id)} onVote={() => vote(leader.id)} big label={leader.text} />}
                     </div>
                   </m.li>
                 )}
@@ -155,7 +156,7 @@ export function Ideas({ ideas: initial }: { ideas: PublicIdea[] }) {
                         {t.categories[idea.category]} · <span className="tabular-nums">{t.ideas.votes(idea.votes_count)}</span>
                       </p>
                     </div>
-                    <VoteButton voted={voted.has(idea.id)} onVote={() => vote(idea.id)} label={idea.text} />
+                    {!IS_STATIC && <VoteButton voted={voted.has(idea.id)} onVote={() => vote(idea.id)} label={idea.text} />}
                   </m.li>
                 ))}
               </AnimatePresence>

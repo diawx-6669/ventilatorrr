@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import "../../globals.css";
+import { fontClasses } from "../../fonts";
+import { withBase } from "@/lib/deploy";
 import { site } from "@/config/site";
 import { alternates, isLocale, localeLabels, locales, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionary";
@@ -33,7 +35,7 @@ export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Prom
     description: t.meta.description,
     alternates: alternates(lang, "/"),
     openGraph: { title, description: t.meta.description, type: "website", locale: localeLabels[lang].htmlLang },
-    icons: { icon: "/icon.svg" },
+    icons: { icon: withBase("/icon.svg") },
   };
 }
 
@@ -44,13 +46,7 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[la
   const t = getDictionary(locale);
 
   return (
-    <html lang={localeLabels[locale].htmlLang}>
-      <head>
-        {/* Latin subsets are needed everywhere (digits, "LIVE", separators); Cyrillic only off the English site. */}
-        {(locale === "en" ? ["sg-lat", "onest-lat"] : ["sg-cyr", "sg-lat", "onest-cyr", "onest-lat"]).map((f) => (
-          <link key={f} rel="preload" href={`/fonts/${f}.woff2`} as="font" type="font/woff2" crossOrigin="" />
-        ))}
-      </head>
+    <html lang={localeLabels[locale].htmlLang} className={fontClasses}>
       <body>
         <a
           href="#main"
