@@ -1,0 +1,257 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ fonts
+   Science Gothic (display, width + weight axes) and Onest (text).
+   Both were checked glyph by glyph for Kazakh: Ә Ғ Қ Ң Ө Ұ Ү Һ І.
+   Subsets were cut with pyftsubset from the OFL fontsource builds.
+   The display face uses font-display: block: it is preloaded and small, and
+   a swap from a fallback would repaint the biggest text on the page late. */
+@font-face {
+  font-family: "Science Gothic";
+  src: url("/fonts/sg-cyr.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-stretch: 50% 200%;
+  font-display: block;
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1;
+}
+@font-face {
+  font-family: "Science Gothic";
+  src: url("/fonts/sg-kz.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-stretch: 50% 200%;
+  font-display: block;
+  unicode-range: U+0492-0493, U+049A-049B, U+04A2-04A3, U+04AE-04AF, U+04BA-04BB, U+04D8-04D9, U+04E8-04E9;
+}
+@font-face {
+  font-family: "Science Gothic";
+  src: url("/fonts/sg-lat.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-stretch: 50% 200%;
+  font-display: block;
+  unicode-range: U+0020-007E, U+00A0, U+00AB, U+00B7, U+00BB, U+2013-2014, U+2019, U+201C-201D, U+2022, U+2026;
+}
+@font-face {
+  font-family: "Onest";
+  src: url("/fonts/onest-cyr.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1;
+}
+@font-face {
+  font-family: "Onest";
+  src: url("/fonts/onest-kz.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0492-0493, U+049A-049B, U+04A2-04A3, U+04AE-04AF, U+04BA-04BB, U+04D8-04D9, U+04E8-04E9;
+}
+@font-face {
+  font-family: "Onest";
+  src: url("/fonts/onest-lat.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0-00FF, U+2010-2027, U+2030-203A, U+20AC, U+2116, U+2190-2193;
+}
+/* Metric-matched fallback so the swap doesn't shove the layout around. */
+@font-face {
+  font-family: "Onest Fallback";
+  src: local("Arial");
+  size-adjust: 104%;
+  ascent-override: 94%;
+  descent-override: 25%;
+}
+
+/* ------------------------------------------------------------------ tokens
+   Colour carries meaning: lime = get on the show, blue = ideas,
+   pink = school news, orange = on air / live. */
+@theme {
+  --color-ink: #080b1c;
+  --color-ink-2: #0f1433;
+  --color-ink-3: #1a2152;
+  --color-paper: #f5f6ff;
+  --color-mute: #b3b9de;
+  --color-lime: #c8ff2e;
+  --color-blue: #3d5bff;
+  --color-pink: #ff2e8b;
+  --color-orange: #ff6a13;
+  --color-live: #ff3b30;
+
+  --font-display: "Science Gothic", "Arial Black", sans-serif;
+  --font-sans: "Onest", "Onest Fallback", system-ui, sans-serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-marquee: marquee var(--marquee-duration, 40s) linear infinite;
+  --animate-live: live 1.4s steps(1, end) infinite;
+
+  @keyframes marquee {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(-50%, 0, 0); }
+  }
+  @keyframes live {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+}
+
+:root {
+  color-scheme: dark;
+  --gutter: 1rem;
+}
+@media (min-width: 768px) {
+  :root { --gutter: 2rem; }
+}
+
+html {
+  background: var(--color-ink);
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+body {
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+::selection {
+  background: var(--color-lime);
+  color: var(--color-ink);
+}
+
+/* Visible, consistent focus everywhere. */
+:focus-visible {
+  outline: 3px solid var(--color-lime);
+  outline-offset: 3px;
+}
+.on-lime :focus-visible,
+.on-pink :focus-visible,
+.on-orange :focus-visible {
+  outline-color: var(--color-ink);
+}
+
+/* Display type helper: width axis is driven per element via --wdth. */
+.display {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-stretch: var(--wdth, 125%);
+  letter-spacing: -0.01em;
+  line-height: 0.92;
+  text-transform: uppercase;
+  font-kerning: normal;
+}
+
+/* ------------------------------------------------------------------ mesh background
+   Four soft colour fields drifting slowly. Transform-only, no blur filter. */
+.mesh {
+  position: fixed;
+  inset: -20vmax;
+  z-index: 0;
+  pointer-events: none;
+  contain: strict;
+}
+.mesh > i {
+  position: absolute;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  opacity: 0.55;
+  will-change: transform;
+}
+.mesh > i:nth-child(1) { left: 5%; top: 0; background: radial-gradient(closest-side, rgb(61 91 255 / 0.55), transparent); animation: drift-a 38s ease-in-out infinite alternate; }
+.mesh > i:nth-child(2) { right: 0; top: 20%; background: radial-gradient(closest-side, rgb(255 46 139 / 0.35), transparent); animation: drift-b 46s ease-in-out infinite alternate; }
+.mesh > i:nth-child(3) { left: 20%; bottom: 0; background: radial-gradient(closest-side, rgb(255 106 19 / 0.22), transparent); animation: drift-c 52s ease-in-out infinite alternate; }
+.mesh > i:nth-child(4) { right: 15%; bottom: 10%; background: radial-gradient(closest-side, rgb(200 255 46 / 0.13), transparent); animation: drift-a 60s ease-in-out infinite alternate-reverse; }
+@keyframes drift-a { to { transform: translate3d(18vmax, 14vmax, 0) scale(1.15); } }
+@keyframes drift-b { to { transform: translate3d(-22vmax, 10vmax, 0) scale(0.9); } }
+@keyframes drift-c { to { transform: translate3d(12vmax, -18vmax, 0) scale(1.2); } }
+
+/* Film grain on a fixed layer only. */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* Halftone dots used on host cards and episode posters. */
+.halftone {
+  background-image: radial-gradient(circle at center, rgb(8 11 28 / 0.28) 1.6px, transparent 2px);
+  background-size: 12px 12px;
+}
+
+/* Entrances in pure CSS: they run before JavaScript loads, so nothing waits on hydration. */
+.rise {
+  animation: rise 0.8s var(--ease-out-expo) var(--delay, 0s) both;
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+}
+@keyframes fan-in {
+  from { transform: scale(0.82) rotate(-28deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise { animation-name: fade; }
+}
+@keyframes fade {
+  from { opacity: 0; }
+}
+
+/* Hidden but still in the DOM for bots. */
+.hp {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Custom cursor only for a real mouse with motion allowed. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  html.has-cursor,
+  html.has-cursor a,
+  html.has-cursor button,
+  html.has-cursor label,
+  html.has-cursor [role="button"] {
+    cursor: none;
+  }
+  html.has-cursor input,
+  html.has-cursor textarea {
+    cursor: text;
+  }
+}
+
+/* Scroll-snap rails. */
+.rail {
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.rail::-webkit-scrollbar { display: none; }
+.rail > * { scroll-snap-align: start; }
+
+/* Reduced motion: keep fades, drop movement. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .mesh > i { animation: none; }
+  .animate-marquee { animation-duration: 0s; animation: none; }
+  *, *::before, *::after {
+    transition-property: opacity, color, background-color, border-color !important;
+  }
+}
+
+@media print {
+  .mesh, .grain, .no-print { display: none !important; }
+  html, body { background: #fff !important; color: #000 !important; }
+}
+
+@media print {
+  header, footer, .no-print { display: none !important; }
+  .poster { color: #000 !important; }
+  @page { size: A4; margin: 1.5cm; }
+}
