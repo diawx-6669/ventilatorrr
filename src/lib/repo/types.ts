@@ -33,8 +33,15 @@ export interface Repo {
   vote(ideaId: string, voterHash: string): Promise<{ count: number; accepted: boolean } | null>;
   /** True when the request is allowed. */
   rateLimit(keyHash: string, max: number, windowSeconds: number): Promise<boolean>;
+}
 
+/**
+ * Admin operations behind our own /api/admin routes. Only the demo store implements them:
+ * with Supabase, the admin panel calls the `admin_*` database functions from the browser.
+ */
+export interface AdminRepo {
   adminList(kind: Kind): Promise<AdminRow[]>;
+  adminDelete(kind: Kind, id: string): Promise<void>;
   adminPatch(patch: AdminPatch): Promise<void>;
   adminEpisodes(): Promise<EpisodeRow[]>;
   adminSaveEpisode(input: EpisodeInput, id?: string): Promise<void>;

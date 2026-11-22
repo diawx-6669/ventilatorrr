@@ -1,4 +1,4 @@
--- СКВОЗНИКИ: schema, Row Level Security, RPCs and storage.
+-- СКВОЗНЯКИ: schema, Row Level Security, RPCs and storage.
 -- Apply once in Supabase: SQL Editor -> paste -> Run (or `supabase db push`).
 --
 -- Access model

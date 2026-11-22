@@ -343,7 +343,7 @@ export function Hero() {
             <g className="[transform-origin:0_0] animate-[spin_40s_linear_infinite] motion-reduce:animate-none">
               <text fill="rgb(245 246 255 / 0.7)" fontSize="19" fontWeight="800" letterSpacing="4.8" style={{ fontFamily: "var(--font-display)", fontStretch: "150%", textTransform: "uppercase" }}>
                 <textPath href="#ring" textLength={2 * Math.PI * 224 - 16}>
-                  {`${t.onAir} • ${t.hero.spinHint} • ${locale === "en" ? site.nameLatin : site.name} • `.repeat(2)}
+                  {`${locale === "en" ? site.nameLatin : site.name} • ${t.hero.spinHint} • @${site.handle} • `.repeat(2)}
                 </textPath>
               </text>
             </g>

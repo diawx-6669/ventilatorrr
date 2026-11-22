@@ -7,11 +7,12 @@ import { fitVar } from "@/lib/fit";
 import { useDict, useLocale } from "@/components/providers";
 import { FanMark } from "@/components/site/fan-mark";
 import { SpringButton, SpringLink } from "@/components/site/spring";
+import { SocialIcons } from "@/components/site/socials";
 import type { Accent } from "./fields";
 
 const BRAND = ["#c8ff2e", "#3d5bff", "#ff2e8b", "#ff6a13", "#f5f6ff"];
 
-/** Full-screen "you're on air" moment with confetti in the show's colours. */
+/** Full-screen "it's sent" moment with confetti in the show's colours. */
 export function Success({ open, accent, onAgain }: { open: boolean; accent: Accent; onAgain: () => void }) {
   const t = useDict();
   const locale = useLocale();
@@ -84,6 +85,10 @@ export function Success({ open, accent, onAgain }: { open: boolean; accent: Acce
             <SpringLink href={localePath(locale)} tone="paper" size="lg" arrow={false}>
               {t.success.home}
             </SpringLink>
+          </div>
+          <div className="mt-10 flex flex-col items-center gap-3">
+            <p className="text-[15px] font-bold">{t.success.follow}</p>
+            <SocialIcons tone="ink" size="lg" />
           </div>
         </m.div>
       )}

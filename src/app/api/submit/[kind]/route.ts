@@ -4,13 +4,11 @@ import { repo } from "@/lib/repo";
 import { clientIp, hmac } from "@/lib/hash";
 import { notifyTeam } from "@/lib/telegram";
 import { readPhoto } from "@/lib/photo";
-import { ideaSchema, newsSchema, participateSchema, resolveNewsDate } from "@/lib/schemas";
+import { MIN_FILL_MS, SUBMIT_SCHEMAS, toRow } from "@/lib/submission";
 import { KINDS, type Kind } from "@/lib/types";
 import { site } from "@/config/site";
 
 const MAX_PER_HOUR = 5;
-/** Humans need more than this to fill any of the forms. */
-const MIN_FILL_MS = 2500;
 
 const ok = () => NextResponse.json({ ok: true });
 const bad = (status: number, error: string, fields?: Record<string, string>) =>
@@ -48,7 +46,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ kind: stri
     return bad(400, "bad_request");
   }
 
-  const schema = { participate: participateSchema, ideas: ideaSchema, news: newsSchema }[kind as Kind];
+  const schema = SUBMIT_SCHEMAS[kind as Kind];
   const parsed = schema.safeParse(payload);
   if (!parsed.success) return bad(422, "invalid", fieldErrors(parsed.error));
 
@@ -66,50 +64,27 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ kind: stri
   if (!allowed) return bad(429, "rate_limited");
 
   try {
-    if (kind === "participate") {
-      const v = participateSchema.parse(payload);
-      await repo.createParticipate({
-        name: v.name,
-        grade: `${v.grade}${v.letter}`,
-        role: v.role,
-        pitch: v.pitch,
-        contact_type: v.contact_type,
-        contact: v.contact,
-        consent: v.consent,
-      });
+    const sub = toRow(kind as Kind, payload);
+    if (sub.kind === "participate") {
+      const r = sub.row;
+      await repo.createParticipate(r);
       after(() =>
-        notifyTeam([
-          `🎤 ${site.name}: хочет в выпуск`,
-          `${v.name}, ${v.grade}${v.letter} · ${v.role}`,
-          v.pitch,
-          `${v.contact_type === "telegram" ? "TG" : "IG"}: @${v.contact}`,
-        ]),
+        notifyTeam([`🎤 ${site.name}: хочет в выпуск`, `${r.name}, ${r.grade} · ${r.role}`, r.pitch, `${r.contact_type === "telegram" ? "TG" : "IG"}: @${r.contact}`]),
       );
-    } else if (kind === "ideas") {
-      const v = ideaSchema.parse(payload);
-      await repo.createIdea({ idea: v.idea, category: v.category, name: v.name });
-      after(() => notifyTeam([`💡 ${site.name}: новая идея (${v.category})`, v.idea, v.name && `от: ${v.name}`]));
+    } else if (sub.kind === "ideas") {
+      const r = sub.row;
+      await repo.createIdea(r);
+      after(() => notifyTeam([`💡 ${site.name}: новая идея (${r.category})`, r.idea, r.name && `от: ${r.name}`]));
     } else {
-      const v = newsSchema.parse(payload);
-      const anonymous = !v.signed;
-      await repo.createNews(
-        {
-          what: v.what,
-          happened_on: resolveNewsDate(v.when, v.date),
-          when_preset: v.when,
-          source: v.source,
-          is_anonymous: anonymous,
-          name: anonymous ? null : v.name,
-        },
-        photo,
-      );
+      const r = sub.row;
+      await repo.createNews(r, photo);
       after(() =>
         notifyTeam([
-          `📰 ${site.name}: новость школы${anonymous ? " (анонимно)" : ""}`,
-          v.what,
-          v.source && `Источник: ${v.source}`,
+          `📰 ${site.name}: новость школы${r.is_anonymous ? " (анонимно)" : ""}`,
+          r.what,
+          r.source && `Источник: ${r.source}`,
           photo && "📎 есть фото",
-          !anonymous && v.name && `от: ${v.name}`,
+          r.name && `от: ${r.name}`,
         ]),
       );
     }

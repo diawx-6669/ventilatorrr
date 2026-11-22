@@ -1,21 +1,38 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowSquareOut, DownloadSimple, SignOut, MagnifyingGlass, Eye, EyeSlash, Trash, PencilSimple, Image as ImageIcon } from "@phosphor-icons/react/dist/ssr";
+import {
+  ArrowClockwise,
+  ArrowSquareOut,
+  DownloadSimple,
+  SignOut,
+  MagnifyingGlass,
+  Eye,
+  EyeSlash,
+  Trash,
+  Image as ImageIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import { site } from "@/config/site";
 import { FanMark } from "@/components/site/fan-mark";
-import type { AdminRow, EpisodeRow, Kind, Status } from "@/lib/types";
+import type { AdminRow, Kind, Status } from "@/lib/types";
 import { STATUSES } from "@/lib/types";
 import { getDictionary } from "@/i18n/dictionary";
+import { withBase } from "@/lib/deploy";
+import { downloadCsv } from "@/lib/csv";
+import type { Backend, Me } from "./backend";
+import { EpisodesAdmin } from "./episodes-admin";
+import { TeamAdmin } from "./team-admin";
 
 const ru = getDictionary("ru");
-type Tab = Kind | "episodes";
+type Tab = Kind | "episodes" | "team";
 
 const TABS: { key: Tab; label: string; tone: string }[] = [
   { key: "participate", label: "Хотят в выпуск", tone: "bg-lime text-ink" },
   { key: "ideas", label: "Идеи", tone: "bg-blue text-paper" },
   { key: "news", label: "Новости", tone: "bg-pink text-ink" },
-  { key: "episodes", label: "Выпуски", tone: "bg-orange text-ink" },
+  { key: "episodes", label: "Выпуски и видео", tone: "bg-orange text-ink" },
+  { key: "team", label: "Команда", tone: "bg-paper text-ink" },
 ];
+const isKind = (t: Tab): t is Kind => t === "participate" || t === "ideas" || t === "news";
 
 const STATUS_LABEL: Record<Status, string> = { new: "Новая", in_progress: "В работе", approved: "Одобрена", rejected: "Отклонена" };
 const STATUS_TONE: Record<Status, string> = {
@@ -27,42 +44,47 @@ const STATUS_TONE: Record<Status, string> = {
 
 const fmt = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" });
 
-async function api<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, { ...init, headers: { "content-type": "application/json", ...init?.headers }, cache: "no-store" });
-  if (res.status === 401) {
-    location.reload();
-    throw new Error("unauthorized");
-  }
-  const data = await res.json();
-  if (!res.ok || !data.ok) throw new Error(data.error ?? "Ошибка сервера");
-  return data as T;
-}
+export type Say = (text: string, error?: boolean) => void;
 
-export function AdminApp({ email, mode }: { email: string; mode: "supabase" | "demo" }) {
+export function AdminApp({ me, backend, onLogout }: { me: Me; backend: Backend; onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>("participate");
   const [rows, setRows] = useState<Record<Kind, AdminRow[] | null>>({ participate: null, ideas: null, news: null });
   const [status, setStatus] = useState<Status | "all">("all");
   const [query, setQuery] = useState("");
   const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const say = useCallback((text: string, error = false) => {
+  const say = useCallback<Say>((text, error = false) => {
     setToast({ text, error });
     setTimeout(() => setToast(null), 3200);
   }, []);
 
-  useEffect(() => {
-    // Load every tab once so the "new" counters are right from the start.
-    let alive = true;
-    for (const kind of ["participate", "ideas", "news"] as const) {
-      api<{ rows: AdminRow[] }>(`/api/admin/rows?kind=${kind}`).then(
-        (data) => alive && setRows((r) => ({ ...r, [kind]: data.rows })),
-        (e: Error) => alive && say(`Не загрузилось: ${e.message}`, true),
+  const loadAll = useCallback(
+    async (alive: () => boolean = () => true) => {
+      // Every list at once, so the "new" counters on the tabs are right from the start.
+      setLoading(true);
+      await Promise.all(
+        (["participate", "ideas", "news"] as const).map((kind) =>
+          backend.rows(kind).then(
+            (list) => alive() && setRows((r) => ({ ...r, [kind]: list })),
+            (e: Error) => alive() && say(`Не загрузилось: ${e.message}`, true),
+          ),
+        ),
       );
-    }
+      if (alive()) setLoading(false);
+    },
+    [backend, say],
+  );
+
+  useEffect(() => {
+    let alive = true;
+    // Deferred a frame: the first load starts after the panel has painted.
+    const id = requestAnimationFrame(() => loadAll(() => alive));
     return () => {
       alive = false;
+      cancelAnimationFrame(id);
     };
-  }, [say]);
+  }, [loadAll]);
 
   async function patch(kind: Kind, id: string, changes: Record<string, unknown>, done?: string) {
     const before = rows[kind];
@@ -77,7 +99,7 @@ export function AdminApp({ email, mode }: { email: string; mode: "supabase" | "d
       }) ?? null,
     }));
     try {
-      await api("/api/admin/rows", { method: "PATCH", body: JSON.stringify({ kind, id, ...changes }) });
+      await backend.patch(kind, id, changes);
       if (done) say(done);
     } catch (e) {
       setRows((r) => ({ ...r, [kind]: before }));
@@ -85,10 +107,23 @@ export function AdminApp({ email, mode }: { email: string; mode: "supabase" | "d
     }
   }
 
+  async function remove(kind: Kind, id: string) {
+    if (!confirm("Удалить заявку насовсем? Вернуть её не получится.")) return;
+    const before = rows[kind];
+    setRows((r) => ({ ...r, [kind]: r[kind]?.filter((row) => row.id !== id) ?? null }));
+    try {
+      await backend.remove(kind, id);
+      say("Заявка удалена");
+    } catch (e) {
+      setRows((r) => ({ ...r, [kind]: before }));
+      say(`Не удалилось: ${(e as Error).message}`, true);
+    }
+  }
+
   const newCount = (k: Kind) => rows[k]?.filter((r) => r.status === "new").length ?? 0;
 
   const visible = useMemo(() => {
-    if (tab === "episodes") return [];
+    if (!isKind(tab)) return [];
     const q = query.trim().toLowerCase();
     return (rows[tab] ?? []).filter((r) => (status === "all" || r.status === status) && (!q || JSON.stringify(r).toLowerCase().includes(q)));
   }, [rows, tab, status, query]);
@@ -101,19 +136,29 @@ export function AdminApp({ email, mode }: { email: string; mode: "supabase" | "d
           <div className="min-w-0">
             <p className="display truncate text-[15px] [--wdth:140%]">{site.name}</p>
             <p className="truncate text-xs text-paper/70">
-              {email} · {mode === "demo" ? "демо-режим" : "Supabase"}
+              {me.email} · {backend.mode === "demo" ? "демо-режим" : me.owner ? "владелец" : "команда"}
             </p>
           </div>
-          <a href="/" target="_blank" className="ml-auto hidden h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold ring-1 ring-white/20 hover:bg-white/10 sm:flex">
+          <button
+            type="button"
+            onClick={() => loadAll()}
+            disabled={loading}
+            aria-label="Обновить заявки"
+            title="Обновить заявки"
+            className="ml-auto grid size-10 shrink-0 place-items-center rounded-full ring-1 ring-white/20 hover:bg-white/10 disabled:opacity-60"
+          >
+            <ArrowClockwise className={`size-5 ${loading ? "animate-spin" : ""}`} aria-hidden />
+          </button>
+          <a href={withBase("/")} target="_blank" className="hidden h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold ring-1 ring-white/20 hover:bg-white/10 sm:flex">
             Сайт <ArrowSquareOut className="size-4" aria-hidden />
           </a>
           <button
             type="button"
             onClick={async () => {
-              await fetch("/api/admin/logout", { method: "POST" });
-              location.reload();
+              await backend.logout();
+              onLogout();
             }}
-            className="ml-auto flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold ring-1 ring-white/20 hover:bg-white/10 sm:ml-0"
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-semibold ring-1 ring-white/20 hover:bg-white/10"
           >
             <SignOut className="size-4" aria-hidden /> Выйти
           </button>
@@ -124,7 +169,7 @@ export function AdminApp({ email, mode }: { email: string; mode: "supabase" | "d
         <div role="tablist" aria-label="Разделы" className="rail -mx-4 flex gap-2 overflow-x-auto px-4 pb-2">
           {TABS.map((t) => {
             const active = tab === t.key;
-            const n = t.key === "episodes" ? 0 : newCount(t.key);
+            const n = isKind(t.key) ? newCount(t.key) : 0;
             return (
               <button
                 key={t.key}
@@ -144,7 +189,9 @@ export function AdminApp({ email, mode }: { email: string; mode: "supabase" | "d
         </div>
 
         {tab === "episodes" ? (
-          <EpisodesAdmin say={say} />
+          <EpisodesAdmin backend={backend} say={say} />
+        ) : tab === "team" ? (
+          <TeamAdmin me={me} backend={backend} say={say} />
         ) : (
           <section role="tabpanel" aria-label={TABS.find((t) => t.key === tab)?.label}>
             <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -173,12 +220,14 @@ export function AdminApp({ email, mode }: { email: string; mode: "supabase" | "d
                   className="h-11 w-full rounded-full bg-ink-2 pl-11 pr-4 outline-none ring-1 ring-white/15 placeholder:text-paper/55 focus:ring-2 focus:ring-lime"
                 />
               </label>
-              <a
-                href={`/api/admin/export?kind=${tab}&status=${status}`}
-                className="flex h-11 items-center justify-center gap-2 rounded-full bg-paper px-5 text-sm font-bold text-ink hover:bg-lime"
+              <button
+                type="button"
+                disabled={!visible.length}
+                onClick={() => downloadCsv(tab, visible)}
+                className="flex h-11 items-center justify-center gap-2 rounded-full bg-paper px-5 text-sm font-bold text-ink hover:bg-lime disabled:opacity-50"
               >
                 <DownloadSimple weight="bold" className="size-5" aria-hidden /> CSV
-              </a>
+              </button>
             </div>
 
             <div className="mt-5 grid gap-3">
@@ -189,7 +238,7 @@ export function AdminApp({ email, mode }: { email: string; mode: "supabase" | "d
                   {rows[tab]!.length === 0 ? "Заявок пока нет. Поделись ссылкой на сайт или повесь QR-плакат." : "Ничего не найдено по этому фильтру."}
                 </p>
               ) : (
-                visible.map((row) => <RowCard key={row.id} row={row} onPatch={patch} />)
+                visible.map((row) => <RowCard key={row.id} row={row} onPatch={patch} onDelete={() => remove(row.kind, row.id)} />)
               )}
             </div>
           </section>
@@ -240,13 +289,30 @@ function NoteField({ value, onSave }: { value: string | null; onSave: (v: string
   );
 }
 
-function RowCard({ row, onPatch }: { row: AdminRow; onPatch: (kind: Kind, id: string, changes: Record<string, unknown>, done?: string) => void }) {
+function RowCard({
+  row,
+  onPatch,
+  onDelete,
+}: {
+  row: AdminRow;
+  onPatch: (kind: Kind, id: string, changes: Record<string, unknown>, done?: string) => void;
+  onDelete: () => void;
+}) {
   const p = (changes: Record<string, unknown>, done?: string) => onPatch(row.kind, row.id, changes, done);
   const head = (
     <div className="flex flex-wrap items-center gap-2 text-[13px] text-paper/70">
       <span className={`rounded-full px-2.5 py-0.5 font-bold ${STATUS_TONE[row.status]}`}>{STATUS_LABEL[row.status]}</span>
       <time dateTime={row.created_at}>{fmt.format(new Date(row.created_at))}</time>
       {"published" in row && row.published && <span className="rounded-full bg-lime/15 px-2.5 py-0.5 font-bold text-lime ring-1 ring-lime/40">на сайте</span>}
+      <button
+        type="button"
+        onClick={onDelete}
+        aria-label="Удалить заявку"
+        title="Удалить (спам, дубль)"
+        className="ml-auto grid size-9 place-items-center rounded-full text-paper/60 ring-1 ring-white/10 hover:bg-pink hover:text-ink"
+      >
+        <Trash className="size-4" aria-hidden />
+      </button>
     </div>
   );
 
@@ -393,147 +459,5 @@ function PublishCard({
         <NoteField value={row.admin_note} onSave={(v) => onPatch({ admin_note: v }, "Заметка сохранена")} />
       </div>
     </article>
-  );
-}
-
-const emptyEpisode = { number: "", title: "", guest: "", description: "", video_url: "", published_on: "", is_published: true };
-
-function EpisodesAdmin({ say }: { say: (t: string, e?: boolean) => void }) {
-  const [list, setList] = useState<EpisodeRow[] | null>(null);
-  const [form, setForm] = useState<typeof emptyEpisode & { id?: string }>(emptyEpisode);
-  const [busy, setBusy] = useState(false);
-
-  const load = useCallback(
-    () =>
-      api<{ rows: EpisodeRow[] }>("/api/admin/episodes").then(
-        (data) => setList(data.rows),
-        (e: Error) => say(`Не загрузилось: ${e.message}`, true),
-      ),
-    [say],
-  );
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      await api("/api/admin/episodes", { method: "POST", body: JSON.stringify(form) });
-      say(form.id ? "Выпуск обновлён" : "Выпуск добавлен");
-      setForm(emptyEpisode);
-      await load();
-    } catch {
-      say("Проверь поля: номер, название, ссылка должна начинаться с https://", true);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const input = "h-12 w-full rounded-xl bg-ink px-3 outline-none ring-1 ring-white/15 focus:ring-2 focus:ring-orange";
-  const set = (k: keyof typeof emptyEpisode, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
-
-  return (
-    <section className="mt-6 grid gap-6 lg:grid-cols-[400px_1fr]">
-      <form onSubmit={save} className="grid gap-3 self-start rounded-3xl bg-ink-2 p-5 ring-1 ring-white/10">
-        <h2 className="text-lg font-bold">{form.id ? "Редактировать выпуск" : "Новый выпуск"}</h2>
-        <div className="grid grid-cols-[90px_1fr] gap-3">
-          <label className="text-sm font-semibold">
-            Номер
-            <input required inputMode="numeric" value={form.number} onChange={(e) => set("number", e.target.value)} className={`${input} mt-1`} />
-          </label>
-          <label className="text-sm font-semibold">
-            Название
-            <input required value={form.title} onChange={(e) => set("title", e.target.value)} className={`${input} mt-1`} />
-          </label>
-        </div>
-        <label className="text-sm font-semibold">
-          Гость
-          <input value={form.guest} onChange={(e) => set("guest", e.target.value)} className={`${input} mt-1`} />
-        </label>
-        <label className="text-sm font-semibold">
-          Ссылка на видео (YouTube, Instagram, TikTok)
-          <input type="url" placeholder="https://" value={form.video_url} onChange={(e) => set("video_url", e.target.value)} className={`${input} mt-1`} />
-        </label>
-        <label className="text-sm font-semibold">
-          Описание
-          <textarea rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} className={`${input} mt-1 h-auto py-2`} />
-        </label>
-        <label className="text-sm font-semibold">
-          Дата выхода
-          <input type="date" value={form.published_on} onChange={(e) => set("published_on", e.target.value)} className={`${input} mt-1 [color-scheme:dark]`} />
-        </label>
-        <label className="flex items-center gap-2 text-sm font-semibold">
-          <input type="checkbox" checked={form.is_published} onChange={(e) => set("is_published", e.target.checked)} className="size-5 accent-orange" />
-          Показывать на сайте
-        </label>
-        <div className="flex gap-2">
-          <button disabled={busy} className="h-12 flex-1 rounded-full bg-orange font-bold text-ink disabled:opacity-60">
-            {form.id ? "Сохранить" : "Добавить выпуск"}
-          </button>
-          {form.id && (
-            <button type="button" onClick={() => setForm(emptyEpisode)} className="h-12 rounded-full px-5 font-semibold ring-1 ring-white/20">
-              Отмена
-            </button>
-          )}
-        </div>
-      </form>
-
-      <div className="grid content-start gap-3">
-        {list === null ? (
-          <div className="h-32 animate-pulse rounded-3xl bg-white/5" />
-        ) : list.length === 0 ? (
-          <p className="rounded-3xl border-2 border-dashed border-white/15 p-10 text-center text-paper/75">Выпусков пока нет. Добавь первый слева.</p>
-        ) : (
-          list.map((ep) => (
-            <article key={ep.id} className="flex items-start gap-4 rounded-3xl bg-ink-2 p-5 ring-1 ring-white/10">
-              <span className="display text-3xl text-orange [--wdth:90%]">{String(ep.number).padStart(2, "0")}</span>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-bold">{ep.title}</h3>
-                <p className="mt-1 truncate text-sm text-paper/75">
-                  {ep.guest ?? "без гостя"} · {ep.video_url ? "есть видео" : "без видео"} · {ep.is_published ? "на сайте" : "скрыт"}
-                </p>
-              </div>
-              <button
-                type="button"
-                aria-label={`Редактировать: ${ep.title}`}
-                onClick={() =>
-                  setForm({
-                    id: ep.id,
-                    number: String(ep.number),
-                    title: ep.title,
-                    guest: ep.guest ?? "",
-                    description: ep.description ?? "",
-                    video_url: ep.video_url ?? "",
-                    published_on: ep.published_on ?? "",
-                    is_published: ep.is_published,
-                  })
-                }
-                className="grid size-10 place-items-center rounded-full ring-1 ring-white/20 hover:bg-white/10"
-              >
-                <PencilSimple className="size-5" aria-hidden />
-              </button>
-              <button
-                type="button"
-                aria-label={`Удалить: ${ep.title}`}
-                onClick={async () => {
-                  if (!confirm(`Удалить «${ep.title}»?`)) return;
-                  try {
-                    await api(`/api/admin/episodes?id=${ep.id}`, { method: "DELETE" });
-                    say("Выпуск удалён");
-                    await load();
-                  } catch {
-                    say("Не удалилось", true);
-                  }
-                }}
-                className="grid size-10 place-items-center rounded-full ring-1 ring-white/20 hover:bg-pink hover:text-ink"
-              >
-                <Trash className="size-5" aria-hidden />
-              </button>
-            </article>
-          ))
-        )}
-      </div>
-    </section>
   );
 }

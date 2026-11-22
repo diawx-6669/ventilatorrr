@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { fitVar } from "@/lib/fit";
 import { useStored, writeStored } from "@/lib/use-stored";
-import { IS_STATIC } from "@/lib/deploy";
+import { CAN_SUBMIT, DIRECT } from "@/lib/deploy";
 import { AnimatePresence, LayoutGroup, m } from "motion/react";
 import { ArrowFatUp, CheckFat } from "@phosphor-icons/react/dist/ssr";
 import { localePath } from "@/i18n/config";
@@ -26,6 +26,12 @@ export function Ideas({ ideas: initial }: { ideas: PublicIdea[] }) {
   const t = useDict();
   const locale = useLocale();
   const [ideas, setIdeas] = useState(initial);
+  // The static site re-fetches ideas after load; adopt the fresh list (render-time sync, no effect).
+  const [seen, setSeen] = useState(initial);
+  if (seen !== initial) {
+    setSeen(initial);
+    setIdeas(initial);
+  }
   const votedRaw = useStored(VOTED_KEY);
   const voted = useMemo(() => parseVoted(votedRaw), [votedRaw]);
   const [filter, setFilter] = useState<Category | "all">("all");
@@ -48,14 +54,22 @@ export function Ideas({ ideas: initial }: { ideas: PublicIdea[] }) {
     remember(next);
     setIdeas((list) => list.map((i) => (i.id === id ? { ...i, votes_count: i.votes_count + 1 } : i)));
     try {
-      const res = await fetch("/api/vote", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ideaId: id }),
-      });
-      const data = (await res.json()) as { ok: boolean; count?: number };
-      if (!res.ok || !data.ok || typeof data.count !== "number") throw new Error();
-      setIdeas((list) => list.map((i) => (i.id === id ? { ...i, votes_count: data.count! } : i)));
+      let count: number | null = null;
+      if (DIRECT) {
+        const { voteDirect } = await import("@/lib/direct");
+        count = await voteDirect(id);
+      } else {
+        const res = await fetch("/api/vote", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ideaId: id }),
+        });
+        const data = (await res.json()) as { ok: boolean; count?: number };
+        if (res.ok && data.ok && typeof data.count === "number") count = data.count;
+      }
+      if (count === null) throw new Error();
+      const fresh = count;
+      setIdeas((list) => list.map((i) => (i.id === id ? { ...i, votes_count: fresh } : i)));
     } catch {
       const back = new Set(next);
       back.delete(id);
@@ -72,7 +86,7 @@ export function Ideas({ ideas: initial }: { ideas: PublicIdea[] }) {
       <h2 id="ideas-title" className="display [--wdth:115%] text-[min(clamp(34px,7vw,88px),calc((min(100vw,1400px)-2*var(--gutter))/(var(--n)*1.2)))]" style={fitVar(t.ideas.title)}>
         {t.ideas.title}
       </h2>
-      <p className="mt-4 max-w-[52ch] text-lg text-paper/85">{IS_STATIC ? t.ideas.staticSub : t.ideas.sub}</p>
+      <p className="mt-4 max-w-[52ch] text-lg text-paper/85">{CAN_SUBMIT ? t.ideas.sub : t.ideas.staticSub}</p>
 
       {ideas.length === 0 ? (
         <div className="mt-10 flex flex-col items-start gap-5 rounded-[28px] border-2 border-dashed border-paper/25 p-8">
@@ -133,7 +147,7 @@ export function Ideas({ ideas: initial }: { ideas: PublicIdea[] }) {
                           {t.categories[leader.category]} · {t.ideas.votes(leader.votes_count)}
                         </p>
                       </div>
-                      {!IS_STATIC && <VoteButton voted={voted.has(leader.id)} onVote={() => vote(leader.id)} big label={leader.text} />}
+                      {CAN_SUBMIT && <VoteButton voted={voted.has(leader.id)} onVote={() => vote(leader.id)} big label={leader.text} />}
                     </div>
                   </m.li>
                 )}
@@ -156,7 +170,7 @@ export function Ideas({ ideas: initial }: { ideas: PublicIdea[] }) {
                         {t.categories[idea.category]} · <span className="tabular-nums">{t.ideas.votes(idea.votes_count)}</span>
                       </p>
                     </div>
-                    {!IS_STATIC && <VoteButton voted={voted.has(idea.id)} onVote={() => vote(idea.id)} label={idea.text} />}
+                    {CAN_SUBMIT && <VoteButton voted={voted.has(idea.id)} onVote={() => vote(idea.id)} label={idea.text} />}
                   </m.li>
                 ))}
               </AnimatePresence>

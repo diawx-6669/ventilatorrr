@@ -7,6 +7,7 @@ import { getDictionary } from "@/i18n/dictionary";
 import { fitVar } from "@/lib/fit";
 import { FanMark } from "@/components/site/fan-mark";
 import { QrActions } from "@/components/site/qr-actions";
+import { SOCIALS } from "@/components/site/socials";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/qr">): Promise<Metadata> {
   const { lang } = await params;
@@ -46,6 +47,14 @@ export default async function QrPage({ params }: PageProps<"/[lang]/qr">) {
         </div>
         <p className="mx-auto mt-6 max-w-[32ch] text-lg font-semibold sm:text-xl">{t.qr.sub}</p>
         <p className="mt-2 break-all text-sm font-medium opacity-75">{target.replace(/^https?:\/\//, "")}</p>
+        <div className="mx-auto mt-6 flex w-fit max-w-full items-center gap-2 rounded-full bg-ink py-2 pl-3 pr-4 text-paper sm:gap-3 sm:pr-5 print:bg-transparent print:text-ink print:ring-2 print:ring-ink">
+          <span className="flex shrink-0 gap-1 sm:gap-1.5" aria-hidden>
+            {SOCIALS.map(({ key, Icon }) => (
+              <Icon key={key} weight="bold" className="size-5 sm:size-6" />
+            ))}
+          </span>
+          <span className="display text-[15px] [--wdth:105%] sm:text-xl sm:[--wdth:120%]">@{site.handle}</span>
+        </div>
       </div>
       <QrActions svg={svg} name={name} />
     </div>

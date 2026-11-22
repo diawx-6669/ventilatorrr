@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import type { EpisodeRow, IdeaRow, NewsRow, ParticipateRow, AdminRow } from "../types";
-import type { Repo } from "./types";
+import type { AdminRepo, Repo } from "./types";
 
 /**
  * In-memory store for local development and previews without Supabase.
@@ -137,7 +137,7 @@ function store(): Store {
 
 const byNewest = <T extends { created_at: string }>(a: T, b: T) => b.created_at.localeCompare(a.created_at);
 
-export const demoRepo: Repo = {
+export const demoRepo: Repo & AdminRepo = {
   mode: "demo",
 
   async publishedNews(limit = 12) {
@@ -249,6 +249,13 @@ export const demoRepo: Repo = {
     const row = list.find((r) => r.id === patch.id);
     if (!row) throw new Error("not_found");
     for (const [k, v] of Object.entries(patch)) if (k !== "kind" && k !== "id" && v !== undefined) row[k] = v;
+  },
+
+  async adminDelete(kind, id) {
+    const s = store();
+    if (kind === "participate") s.participate = s.participate.filter((r) => r.id !== id);
+    else if (kind === "ideas") s.ideas = s.ideas.filter((r) => r.id !== id);
+    else s.news = s.news.filter((r) => r.id !== id);
   },
 
   async adminEpisodes() {

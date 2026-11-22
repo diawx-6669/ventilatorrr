@@ -61,6 +61,20 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[la
           <i />
         </div>
         <div className="grain" aria-hidden />
+        <script
+          type="application/ld+json"
+          // Lets search engines link the site to the show's accounts.
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: locale === "en" ? site.nameLatin : site.name,
+              url: site.url,
+              logo: `${site.url.replace(/\/$/, "")}${withBase("/brand/avatar-1080.png")}`,
+              sameAs: Object.values(site.social),
+            }),
+          }}
+        />
         <Providers locale={locale}>
           <Header />
           <main id="main" className="relative z-10">

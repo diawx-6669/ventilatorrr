@@ -14,7 +14,7 @@
 
 /* ------------------------------------------------------------------ tokens
    Colour carries meaning: lime = get on the show, blue = ideas,
-   pink = school news, orange = on air / live. */
+   pink = school news, orange = episodes and the news crawl. */
 @theme {
   --color-ink: #080b1c;
   --color-ink-2: #0f1433;
@@ -25,7 +25,6 @@
   --color-blue: #3d5bff;
   --color-pink: #ff2e8b;
   --color-orange: #ff6a13;
-  --color-live: #ff3b30;
 
   --font-display: "Science Gothic", "Arial Black", sans-serif;
   --font-sans: "Onest", "Onest Fallback", system-ui, sans-serif;
@@ -33,15 +32,10 @@
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
   --animate-marquee: marquee var(--marquee-duration, 40s) linear infinite;
-  --animate-live: live 1.4s steps(1, end) infinite;
 
   @keyframes marquee {
     from { transform: translate3d(0, 0, 0); }
     to { transform: translate3d(-50%, 0, 0); }
-  }
-  @keyframes live {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.2; }
   }
 }
 

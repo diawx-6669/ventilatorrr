@@ -92,18 +92,18 @@ export type AdminPatch = z.infer<typeof adminPatchSchema>;
 export const episodeSchema = z.object({
   number: z.coerce.number().int().min(0).max(999),
   title: z.string().trim().min(2).max(140),
-  guest: z.string().trim().max(80).optional().transform((s) => s || null),
-  description: z.string().trim().max(500).optional().transform((s) => s || null),
+  guest: z.string().trim().max(80).nullish().transform((s) => s || null),
+  description: z.string().trim().max(500).nullish().transform((s) => s || null),
   video_url: z
     .string()
     .trim()
     .max(300)
-    .optional()
+    .nullish()
     .transform((s) => s || null)
     .refine((s) => s === null || /^https:\/\//.test(s), { message: "https link" }),
   published_on: z
     .string()
-    .optional()
+    .nullish()
     .transform((s) => s || null)
     .refine((s) => s === null || /^\d{4}-\d{2}-\d{2}$/.test(s)),
   is_published: z.boolean().default(true),

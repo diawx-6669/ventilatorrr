@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { repo } from "@/lib/repo";
+import { demoRepo as repo } from "@/lib/repo/demo";
 import { adminRoute, refreshPublicSite } from "@/lib/admin-route";
 import { episodeSchema } from "@/lib/schemas";
 

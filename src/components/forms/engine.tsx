@@ -8,7 +8,8 @@ import type { Kind } from "@/lib/types";
 import { SpringButton } from "@/components/site/spring";
 import { Honeypot, type Accent } from "./fields";
 import { Success } from "./success";
-import { IS_STATIC } from "@/lib/deploy";
+import { CAN_SUBMIT, DIRECT } from "@/lib/deploy";
+import { MIN_FILL_MS } from "@/lib/submission";
 
 /** Form state that survives switching apps to copy a nickname. Kept on this device only. */
 export function useDraft<T extends object>(key: string, initial: T) {
@@ -84,7 +85,29 @@ export function useSubmit<S extends z.ZodType>(kind: Kind, schema: S) {
       return false;
     }
     setErrors({});
+    if (!CAN_SUBMIT) return false;
     setPhase("sending");
+    if (DIRECT) {
+      // Static site: straight to Supabase. Bots (honeypot / instant submit) get a fake success.
+      if (honeypot || Date.now() - startedAt.current < MIN_FILL_MS) {
+        setPhase("done");
+        return true;
+      }
+      try {
+        const { submitDirect } = await import("@/lib/direct");
+        const result = await submitDirect(kind, payload, photo);
+        if (result === "ok") {
+          setPhase("done");
+          return true;
+        }
+        setPhase("idle");
+        setBanner(result === "rate_limited" ? "rateLimited" : "generic");
+      } catch {
+        setPhase("idle");
+        setBanner("generic");
+      }
+      return false;
+    }
     const body = new FormData();
     body.set("payload", JSON.stringify(payload));
     body.set("website", honeypot);
@@ -160,7 +183,7 @@ export function FormFrame({
         className="flex flex-col gap-4"
       >
         <Honeypot value={state.honeypot} onChange={state.setHoneypot} />
-        {IS_STATIC && (
+        {!CAN_SUBMIT && (
           <p className="flex items-start gap-2 rounded-2xl bg-orange/15 p-4 text-[16px] font-semibold text-paper ring-1 ring-orange/50">
             <WarningCircle weight="bold" className="mt-0.5 size-5 shrink-0 text-orange" aria-hidden />
             {t.forms.staticNotice}
@@ -184,7 +207,7 @@ export function FormFrame({
           </AnimatePresence>
         </div>
 
-        <SpringButton type="submit" tone={tone} size="lg" className="mt-1 w-full sm:w-auto sm:self-start" disabled={IS_STATIC || state.phase === "sending"}>
+        <SpringButton type="submit" tone={tone} size="lg" className="mt-1 w-full sm:w-auto sm:self-start" disabled={!CAN_SUBMIT || state.phase === "sending"}>
           {state.phase === "sending" ? t.forms.sending : t.forms.submit}
           <PaperPlaneTilt weight="bold" className={`size-5 ${state.phase === "sending" ? "motion-safe:animate-pulse" : ""}`} aria-hidden />
         </SpringButton>

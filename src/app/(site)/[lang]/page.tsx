@@ -2,11 +2,8 @@ import { repo } from "@/lib/repo";
 import { getDictionary } from "@/i18n/dictionary";
 import type { Locale } from "@/i18n/config";
 import { Hero } from "@/components/site/hero";
-import { Ticker } from "@/components/site/ticker";
-import { Doors } from "@/components/site/doors";
 import { Hosts } from "@/components/site/hosts";
-import { Episodes } from "@/components/site/episodes";
-import { Ideas } from "@/components/site/ideas";
+import { LiveHome } from "@/components/site/live-home";
 
 // Re-render at most once a minute; admin actions refresh it immediately.
 export const revalidate = 60;
@@ -36,11 +33,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
   return (
     <>
       <Hero />
-      <Ticker news={news} t={t} />
-      <Doors stats={stats} />
-      <Hosts t={t} locale={locale} />
-      <Episodes episodes={episodes} />
-      <Ideas ideas={ideas} />
+      <LiveHome initial={{ news, ideas, episodes, stats }} hosts={<Hosts t={t} locale={locale} />} />
     </>
   );
 }

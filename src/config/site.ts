@@ -4,15 +4,15 @@
  */
 export const site = {
   /** Working title. One place to change it. */
-  name: "СКВОЗНИКИ",
-  /** Latin spelling for the English version and link previews. */
-  nameLatin: "SKVOZNIKI",
+  name: "СКВОЗНЯКИ",
+  /** Latin spelling for the English version and link previews. Matches the social handle. */
+  nameLatin: "SKVOZNAKI",
   /**
    * How the name breaks into lines in the hero poster.
    * Must join back into `name` (hyphens are allowed). Leave empty to keep one line.
    */
-  nameLines: ["СКВОЗ-", "НИКИ"],
-  nameLinesLatin: ["SKVOZ-", "NIKI"],
+  nameLines: ["СКВОЗ-", "НЯКИ"],
+  nameLinesLatin: ["SKVOZ-", "NAKI"],
 
   school: {
     ru: "НИШ IB, Астана",
@@ -23,10 +23,12 @@ export const site = {
   /** Public URL, used for the QR poster and link previews. Override with NEXT_PUBLIC_SITE_URL. */
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
 
+  /** One handle everywhere. Shown next to the icons on the site and the QR poster. */
+  handle: "skvoznaki",
   social: {
-    instagram: "https://instagram.com/",
-    tiktok: "https://tiktok.com/",
-    youtube: "https://youtube.com/",
+    instagram: "https://www.instagram.com/skvoznaki/",
+    tiktok: "https://www.tiktok.com/@skvoznaki",
+    youtube: "https://www.youtube.com/@skvoznaki",
   },
 
   /**

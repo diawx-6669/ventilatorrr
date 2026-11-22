@@ -2,10 +2,10 @@ import type { NextConfig } from "next";
 
 /**
  * Two ways to run:
- * - default (Vercel / `next start`): full site with forms, votes, admin.
- * - GITHUB_PAGES=1: static export for https://<user>.github.io/<repo>/ (a showcase:
- *   no server, so forms/votes/admin are off). Only .tsx route files are built, which
- *   leaves out API routes (route.ts), the proxy and the admin (page.ts / layout.ts).
+ * - default (Vercel / `next start`): full site; forms and votes go through our API routes.
+ * - GITHUB_PAGES=1: static export for https://<user>.github.io/<repo>/. No server: with the
+ *   public Supabase keys set, the browser talks to Supabase directly (forms, votes, admin).
+ *   Only .tsx route files are built, which leaves out the API routes (route.ts) and the proxy.
  */
 const pages = process.env.GITHUB_PAGES === "1";
 const basePath = pages ? (process.env.PAGES_BASE_PATH ?? "/ventilatorrr") : "";

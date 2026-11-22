@@ -30,6 +30,10 @@ jobs:
         env:
           PAGES_BASE_PATH: /${{ github.event.repository.name }}
           NEXT_PUBLIC_SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          # Public by design (the browser needs them). Everything they allow is limited by
+          # Row Level Security and the admin_* functions in supabase/migrations.
+          NEXT_PUBLIC_SUPABASE_URL: https://nloyzneqsoqhabxmqowl.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sb3l6bmVxc29xaGFieG1xb3dsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNTMyNjcsImV4cCI6MjExMDkyOTI2N30.TA0WUsL4Ea_9liVur7-Zp4eBDbcii_p2mmoG8-N9V2k
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

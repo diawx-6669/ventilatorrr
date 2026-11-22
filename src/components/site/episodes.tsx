@@ -7,6 +7,7 @@ import { useDict } from "@/components/providers";
 import type { PublicEpisode } from "@/lib/types";
 import { parseVideo } from "@/lib/video";
 import { springTap } from "./spring";
+import { SocialChips } from "./socials";
 
 const posterTone = ["bg-blue", "bg-pink", "bg-ink-3", "bg-orange"];
 
@@ -19,6 +20,10 @@ export function Episodes({ episodes }: { episodes: PublicEpisode[] }) {
         <h2 id="episodes-title" className="display [--wdth:115%] text-[min(clamp(34px,7vw,88px),calc((min(100vw,1400px)-2*var(--gutter))/(var(--n)*1.2)))]" style={fitVar(t.episodes.title)}>
           {t.episodes.title}
         </h2>
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <p className="text-[15px] font-semibold text-paper/75">{t.social.episodes}:</p>
+          <SocialChips />
+        </div>
       </div>
       {episodes.length === 0 ? (
         <div className="mx-auto mt-8 max-w-[1400px] px-[var(--gutter)]">

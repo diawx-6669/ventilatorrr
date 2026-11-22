@@ -8,6 +8,7 @@ import { LOCALE_COOKIE, localeLabels, localePath, locales, isLocale } from "@/i1
 import { useDict, useLocale } from "@/components/providers";
 import { FanMark } from "./fan-mark";
 import { withBase } from "@/lib/deploy";
+import { SocialIcons } from "./socials";
 
 export function Header() {
   const t = useDict();
@@ -33,11 +34,6 @@ export function Header() {
           <span className="display hidden text-[15px] [--wdth:150%] sm:inline">{locale === "en" ? site.nameLatin : site.name}</span>
         </Link>
 
-        <span className="flex items-center gap-1.5 rounded-full bg-ink/70 px-2.5 py-1 text-[12px] font-bold tracking-wide ring-1 ring-white/15 backdrop-blur">
-          <span className="size-2 animate-live rounded-full bg-live motion-reduce:animate-none" aria-hidden />
-          {t.live}
-        </span>
-
         <nav aria-label="Main" className="ml-auto hidden items-center gap-1 rounded-full bg-ink/60 p-1 ring-1 ring-white/10 backdrop-blur md:flex">
           {[
             ["#episodes", t.nav.episodes],
@@ -49,6 +45,8 @@ export function Header() {
             </Link>
           ))}
         </nav>
+
+        <SocialIcons size="sm" className="ml-2 hidden rounded-full bg-ink/60 p-1 ring-1 ring-white/10 backdrop-blur lg:flex" />
 
         <nav aria-label={t.nav.language} className="ml-auto flex items-center rounded-full bg-ink/60 p-1 ring-1 ring-white/10 backdrop-blur md:ml-2">
           {locales.map((l) => {
